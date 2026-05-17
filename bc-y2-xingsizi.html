@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>华文切水果大对决</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .fruit-enter { transform: translateY(100vh); }
+        .fruit-exit { transform: translateY(-100vh); opacity: 0; }
+        @keyframes float {
+            0% { transform: translateY(100vh) rotate(0deg); }
+            50% { transform: translateY(20vh) rotate(180deg); }
+            100% { transform: translateY(100vh) rotate(360deg); }
+        }
+        .animate-float { animation: float 4s ease-in-out infinite; }
+    </style>
+</head>
+<body class="bg-blue-50 overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+
+        const FRUITS = [
+            { char: '🍎', word: '苹果', color: 'bg-red-400' },
+            { char: '🍌', word: '香蕉', color: 'bg-yellow-300' },
+            { char: '🍉', word: '西瓜', color: 'bg-green-500' },
+            { char: '🍇', word: '葡萄', color: 'bg-purple-400' },
+            { char: '🍊', word: '橙子', color: 'bg-orange-400' }
+        ];
+
+        function Game() {
+            const [score, setScore] = useState(0);
+            const [items, setItems] = useState([]);
+            const [gameActive, setGameActive] = useState(false);
+
+            const spawnFruit = useCallback(() => {
+                if (!gameActive) return;
+                const fruit = FRUITS[Math.floor(Math.random() * FRUITS.length)];
+                const newItem = {
+                    id: Date.now(),
+                    ...fruit,
+                    left: Math.random() * 80 + 10, // 10% to 90%
+                    delay: Math.random() * 2
+                };
+                setItems(prev => [...prev, newItem]);
+
+                // 5秒后移除未被切到的水果
+                setTimeout(() => {
+                    setItems(prev => prev.filter(i => i.id !== newItem.id));
+                }, 5000);
+            }, [gameActive]);
+
+            useEffect(() => {
+                let interval;
+                if (gameActive) {
+                    interval = setInterval(spawnFruit, 1000);
+                }
+                return () => clearInterval(interval);
+            }, [gameActive, spawnFruit]);
+
+            const handleSlice = (id) => {
+                setScore(prev => prev + 10);
+                setItems(prev => prev.filter(i => i.id !== id));
+            };
+
+            return (
+                <div className="relative w-screen h-screen flex flex-col items-center justify-center">
+                    {/* 计分板 */}
+                    <div className="absolute top-4 left-4 text-2xl font-bold text-blue-800 z-50">
+                        得分: {score}
+                    </div>
+
+                    {!gameActive ? (
+                        <div className="text-center z-50">
+                            <h1 className="text-4xl font-extrabold text-orange-600 mb-8">华文切水果大对决</h1>
+                            <button 
+                                onClick={() => { setGameActive(true); setScore(0); }}
+                                className="px-8 py-4 bg-green-500 text-white rounded-full text-2xl hover:bg-green-600 transition-transform active:scale-95 shadow-lg"
+                            >
+                                开始游戏
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="w-full h-full relative">
+                            {items.map(item => (
+                                <div
+                                    key={item.id}
+                                    className={`absolute cursor-pointer select-none animate-float p-4 rounded-2xl shadow-md flex flex-col items-center transition-transform hover:scale-110 ${item.color}`}
+                                    style={{ left: `${item.left}%`, bottom: '-100px' }}
+                                    onMouseDown={() => handleSlice(item.id)}
+                                    onTouchStart={() => handleSlice(item.id)}
+                                >
+                                    <span className="text-6xl">{item.char}</span>
+                                    <span className="text-white font-bold text-xl mt-1">{item.word}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    
+                    {gameActive && (
+                        <button 
+                            onClick={() => setGameActive(false)}
+                            className="absolute top-4 right-4 bg-gray-200 px-4 py-2 rounded-lg text-sm"
+                        >
+                            结束
+                        </button>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Game />);
+    </script>
+</body>
+</html>
